@@ -1,0 +1,2 @@
+le *corps* et *corps2* du "fichier" final
+*test* *test2*
