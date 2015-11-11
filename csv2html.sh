@@ -1,37 +1,48 @@
 #!/bin/bash
 
-#A lancer dans le terminal comme suit :
-#cat bieres.csv | ./csv2html.sh
+DELIM=';'
+NUMCOL="0";
 
-delimiteur=';';
-tri=1;
+function readCsv () {
+	cat | while IFS=$'\n' read -a Array
+	do 
+		echo "${Array[@]}"
+	done
+}
 
-#On parcours la liste des arguments passés en paramètre
+#On récupère le nom des colonnes
+read HEAD;
+
+#On vérifie les différentes options
 for i in $@
 do
 	case ${i} in
 		-d?)					#Option pour le délimiteur
-			delimiteur=${i:2};
+			DELIM=${i:2};
 		;;
 		-s*)					#Option pour le tri par numero de colonne
-			tri=${i:2};
+			NUMCOL=${i:2};
 		;;
-		-S*)	#BUG ICI, tri recoit bien le numéro de la colonne					#Option pour le tri par nom de colonne
-			tri=$(head -n 1 | tr ";" "\n" | grep ${i:2} -n | cut -d: -f1)
+		-S*)					#Option pour le tri par nom de colonne
+			NUMCOL=$(echo $HEAD | tr ";" $"\n" | grep ${i:2} -n | cut -d: -f1)
 		;;
 	esac
 done
 
-i=0;
+#Affichage de l'entete
 echo "<table>";
-(head -n 1 && tail -n +2 | sort -t$delimiteur -k$tri) | while read line		#Entree standard avec entête fixe
-do
-	if ((i==0))					#Première ligne donc entête du tableau
-    then
-    	echo '<tr><th>'$line'</th></tr>' | (sed s/$delimiteur/'<\/th><th>'/g)
-		i=$i+1;
-    else
-		echo '<tr><td>'$line'</td></tr>' | (sed s/$delimiteur/'<\/td><td>'/g)
-    fi
-done
+echo -e "\t<tr>"
+echo -e "\t\t<th>$HEAD</th>" | sed "s/$DELIM/<\/th><th>/g";
+echo -e "\t</tr>";
+
+#Si un trie est spécifié sur une colonne, alors on effectue ce trie, sinon on affiche le tableau sans le trier
+if [ $NUMCOL -ne 0 ]
+then
+	readCsv | sort -t';' -k$NUMCOL | sed -r -s "s/(.*)/\t<tr>\n\t\t<td>\1<\/td>\n\t<\/tr>/g" | sed "s/$DELIM/<\/td><td>/g"
+	
+else
+	readCsv | sed -r -s "s/(.*)/\t<tr>\n\t\t<td>\1<\/td>\n\t<\/tr>/g" | sed "s/$DELIM/<\/td><td>/g"
+fi
+
 echo "</table>";
+IFS=' ';
